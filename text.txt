@@ -1,0 +1,57 @@
+import { useState, useRef } from 'react';
+
+export default function Home() {
+  const videoRef = useRef(null);
+  const [gestureText, setGestureText] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [userInput, setUserInput] = useState('');
+
+  const handleTranslateGesture = async () => {
+    if (!userInput) return;
+
+    try {
+      const refinedText = await fetch('/api/whisper', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: userInput }),
+      }).then((res) => res.text()); // Retrieve the audio or text
+
+      console.log('Audio Response:', refinedText);
+      setGestureText(refinedText);
+    } catch (error) {
+      console.error('Error translating gesture:', error);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+      <h1 className="text-4xl font-bold text-gray-800 mb-6">Sign Language to Speech</h1>
+
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        className="w-80 h-60 border-4 border-gray-300 rounded-lg shadow-lg mb-4"
+      ></video>
+
+      <p className="text-xl text-gray-700 italic mb-4">Detected Gesture: {gestureText}</p>
+
+      <input
+        type="text"
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+        placeholder="Enter sign gesture in English"
+        className="p-2 border rounded mb-4"
+      />
+
+      <button
+        onClick={handleTranslateGesture}
+        className="px-4 py-2 bg-blue-500 text-white rounded"
+      >
+        Translate Gesture to Audio
+      </button>
+    </div>
+  );
+}
