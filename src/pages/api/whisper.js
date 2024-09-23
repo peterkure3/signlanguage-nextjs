@@ -1,36 +1,37 @@
-// pages/api/whisper.js
+// pages/api/text-to-speech.js
+
+import axios from 'axios';
 
 export default async function handler(req, res) {
-    if (req.method === 'POST') {
-        const { text } = req.body;
+    if (req.method !== 'POST') {
+        return res.status(405).json({ message: 'Method Not Allowed' });
+    }
 
-        try {
-            // Call the OpenAI Whisper API to generate audio
-            const audioResponse = await fetchWhisperAudio(text);
-            res.status(200).send(audioResponse);
-        } catch (error) {
-            res.status(500).json({ error: 'Failed to process Whisper request' });
-        }
-    } else {
-        res.status(405).json({ message: 'Method Not Allowed' });
+    const { text } = req.body;
+
+    try {
+        const response = await axios({
+            method: 'post',
+            url: 'https://api.openai.com/v1/audio/speech',
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+                'Content-Type': 'application/json',
+            },
+            data: {
+                model: 'tts-1',
+                input: text,
+                voice: 'alloy',
+            },
+            responseType: 'arraybuffer',
+        });
+
+        const audioBuffer = Buffer.from(response.data);
+
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Content-Length', audioBuffer.length);
+        res.send(audioBuffer);
+    } catch (error) {
+        console.error('Error processing Text-to-Speech request:', error);
+        res.status(500).json({ error: 'Failed to process Text-to-Speech request' });
     }
 }
-
-// Function to call Whisper API
-const fetchWhisperAudio = async (text) => {
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({ text }), // Adapt the payload based on the API requirements
-    });
-
-    if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
-    }
-
-    const audioData = await response.blob();
-    return audioData; // Return the audio blob for playback
-};
